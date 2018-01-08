@@ -11,5 +11,6 @@ Homepage: <insert the upstream URL, if relevant>
 Package: haproxy-auth-request
 Architecture: all
 Depends: ${misc:Depends}
+Suggests: haproxy
 Description: <insert up to 60 chars description>
  <insert long description, indented with spaces>
