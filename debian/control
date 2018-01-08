@@ -12,5 +12,8 @@ Package: haproxy-auth-request
 Architecture: all
 Depends: ${misc:Depends}
 Suggests: haproxy
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Description: Access control using backend services
+ This package allows you perform access control for
+ HTTP requests, by making a subrequest to a backend
+ service that decides whether or not to allow the
+ original request.
