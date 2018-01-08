@@ -1,0 +1,5 @@
+debian/debhelper-build-stamp
+debian/files
+debian/haproxy-auth-request.debhelper.log
+debian/haproxy-auth-request.substvars
+debian/haproxy-auth-request/
