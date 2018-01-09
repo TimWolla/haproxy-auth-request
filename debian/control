@@ -1,0 +1,20 @@
+Source: haproxy-auth-request
+Section: net
+Priority: optional
+Maintainer: Tim Düsterhus <tim@bastelstu.be>
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.8
+Homepage: <insert the upstream URL, if relevant>
+#Vcs-Git: https://anonscm.debian.org/collab-maint/haproxy-auth-request.git
+#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/haproxy-auth-request.git
+
+Package: haproxy-auth-request
+Architecture: all
+Depends: ${misc:Depends},
+         lua-socket
+Suggests: haproxy
+Description: HTTP access control using subrequests
+ auth-request allows you to add access control to your HTTP services based
+ on a subrequest to a configured haproxy backend. The workings of this Lua
+ script are loosely based on the ngx_http_auth_request_module module for
+ nginx.

@@ -59,12 +59,12 @@ function create_sock()
 	return sock
 end
 
-core.register_action("auth_request", { "http-req" }, function(txn, be, path)
+core.register_action("auth-request", { "http-req" }, function(txn, be, path)
 	txn:set_var("txn.auth_response_successful", false)
 
 	-- Check whether the given backend exists.
 	if core.backends[be] == nil then
-		txn:Alert("Unknown auth_request backend '" .. be .. "'")
+		txn:Alert("Unknown auth-request backend '" .. be .. "'")
 		txn:set_var("txn.auth_response_code", 500)
 		return
 	end
@@ -78,7 +78,7 @@ core.register_action("auth_request", { "http-req" }, function(txn, be, path)
 		end
 	end
 	if addr == nil then
-		txn:Warning("No servers available for auth_request backend: '" .. be .. "'")
+		txn:Warning("No servers available for auth-request backend: '" .. be .. "'")
 		txn:set_var("txn.auth_response_code", 500)
 		return
 	end
@@ -107,7 +107,7 @@ core.register_action("auth_request", { "http-req" }, function(txn, be, path)
 
 	-- Check whether we received a valid HTTP response.
 	if b == nil then
-		txn:Warning("Failure in auth_request backend '" .. be .. "': " .. c)
+		txn:Warning("Failure in auth-request backend '" .. be .. "': " .. c)
 		txn:set_var("txn.auth_response_code", 500)
 		return
 	end
@@ -121,7 +121,7 @@ core.register_action("auth_request", { "http-req" }, function(txn, be, path)
 		txn:set_var("txn.auth_response_code", c)
 	-- Everything else: Do not allow request and log.
 	else
-		txn:Warning("Invalid status code in auth_request backend '" .. be .. "': " .. c)
+		txn:Warning("Invalid status code in auth-request backend '" .. be .. "': " .. c)
 		txn:set_var("txn.auth_response_code", c)
 	end
 end, 2)
