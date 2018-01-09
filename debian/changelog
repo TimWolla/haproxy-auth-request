@@ -1,5 +1,5 @@
-haproxy-auth-request (0) unstable; urgency=medium
+haproxy-auth-request (0) UNRELEASED; urgency=medium
 
   * Initial Release.
 
- -- root <root@unknown>  Mon, 08 Jan 2018 22:56:57 +0000
+ -- Tim Düsterhus <tim@bastelstu.be>  Mon, 08 Jan 2018 22:56:57 +0000
