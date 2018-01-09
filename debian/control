@@ -10,7 +10,8 @@ Homepage: <insert the upstream URL, if relevant>
 
 Package: haproxy-auth-request
 Architecture: all
-Depends: ${misc:Depends}
+Depends: ${misc:Depends},
+         lua-socket
 Suggests: haproxy
 Description: Access control using backend services
  This package allows you perform access control for
