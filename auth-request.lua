@@ -50,12 +50,6 @@ function create_sock()
 		return 1
 	end
 
-	-- https://www.mail-archive.com/haproxy@formilux.org/msg28603.html
-	sock.old_connect = sock.connect
-	sock.connect = function(socket, host, port)
-		return socket:old_connect(host..":", port)
-	end
-
 	return sock
 end
 
