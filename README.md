@@ -61,5 +61,9 @@ to `500 Internal Server Error`.
   or load balancing of any kind.
 - The response headers of the subrequest are not exposed outside the script.
 - The backend must not be using TLS.
+- IPv6 is only supported in haproxy 1.8.4+ (not released as of 2018-01-15), due
+  [do a bug][2]. You can [monkeypatch by reverting commit 57950b4][3].
 
 [1]: http://nginx.org/en/docs/http/ngx_http_auth_request_module.html
+[2]: http://git.haproxy.org/?p=haproxy-1.8.git;a=commit;h=9db449a701cd9e43a04f49e2e477193fa5636323
+[3]: https://github.com/TimWolla/haproxy-auth-request/commit/57950b4639542ba429e54b959604e33237c6cffe
