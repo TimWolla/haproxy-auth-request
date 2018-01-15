@@ -20,7 +20,7 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 -- SOFTWARE.
 
-http = require("socket.http")
+local http = require("socket.http")
 
 --- Monkey Patches around bugs in haproxy's Socket class
 -- This function calls core.tcp(), fixes a few methods and
