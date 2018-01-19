@@ -69,6 +69,7 @@ core.register_action("auth-request", { "http-req" }, function(txn, be, path)
 	for name, server in pairs(core.backends[be].servers) do
 		if server:get_stats()['status'] ~= "DOWN" then
 			addr = server:get_addr()
+			break
 		end
 	end
 	if addr == nil then
