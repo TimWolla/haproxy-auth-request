@@ -15,7 +15,7 @@ for nginx.
 
 ### Recommended
 
-- haproxy 1.8.4+ for IPv6 support, see [Known Limitations](#Known limitations).
+- haproxy 1.8.4+ for IPv6 support, see [Known Limitations](#Known_limitations).
 
 ## Set-Up
 
