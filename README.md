@@ -5,6 +5,18 @@ on a subrequest to a configured haproxy backend. The workings of this Lua
 script are loosely based on the [ngx_http_auth_request_module][1] module
 for nginx.
 
+## Requirements
+
+### Required
+
+- haproxy 1.8.0+
+- `USE_LUA=1` set at compile time.
+- LuaSocket in your Lua library path (`LUA_PATH`).
+
+### Recommended
+
+- haproxy 1.8.4+ for IPv6 support, see [Known Limitations](#Known limitations).
+
 ## Set-Up
 
 1. Load this Lua script in the `global` section of your `haproxy.cfg`:
