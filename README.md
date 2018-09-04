@@ -11,7 +11,7 @@ for nginx.
 
 - haproxy 1.8.0+
 - `USE_LUA=1` set at compile time.
-- LuaSocket with commit diegonehab/luasocket@0b03eec16be0b3a5efe71bcb8887719d1ea87d60 in your Lua library path (`LUA_PATH`).
+- LuaSocket with commit [0b03eec16b](https://github.com/diegonehab/luasocket/commit/0b03eec16be0b3a5efe71bcb8887719d1ea87d60) (that is: newer than 2014-11-10) in your Lua library path (`LUA_PATH`).
   - `lua-socket` from Debian Stretch works.
   - `lua-socket` from Ubuntu Xenial works.
   - `lua-socket` from Ubuntu Bionic works.
