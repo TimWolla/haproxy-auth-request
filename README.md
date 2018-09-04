@@ -35,7 +35,7 @@ backend auth_request
 ```
 frontend http
 	mode http
-	listen :::80 v4v6
+	bind :::80 v4v6
 	# *snip*
 
 	#                             Backend name     Path to request
