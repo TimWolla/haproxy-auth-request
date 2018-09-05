@@ -15,6 +15,7 @@ for nginx.
   - `lua-socket` from Debian Stretch works.
   - `lua-socket` from Ubuntu Xenial works.
   - `lua-socket` from Ubuntu Bionic works.
+  - `lua5.3-socket` from Alpine 3.8 works.
   - `luasocket` from luarocks *does not* work.
   - `lua-socket` v3.0.0.17.rc1 from EPEL *does not* work.
   - `lua-socket` from Fedora 28 *does not* work.
