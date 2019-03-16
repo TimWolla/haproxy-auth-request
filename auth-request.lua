@@ -83,11 +83,13 @@ core.register_action("auth-request", { "http-req" }, function(txn, be, path)
 	-- socket.http's format.
 	local headers = {}
 	for header, values in pairs(txn.http:req_get_headers()) do
-		for i, v in pairs(values) do
-			if headers[header] == nil then
-				headers[header] = v
-			else
-				headers[header] = headers[header] .. ", " .. v
+		if header ~= 'content-length' then
+			for i, v in pairs(values) do
+				if headers[header] == nil then
+					headers[header] = v
+				else
+					headers[header] = headers[header] .. ", " .. v
+				end
 			end
 		end
 	end
