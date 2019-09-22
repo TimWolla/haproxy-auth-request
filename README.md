@@ -59,10 +59,11 @@ frontend http
 ## The Details
 
 The Lua script will make a HTTP request to the *first* server in the given
-backend that is *not* marked as `DOWN`. This allows for basic health checking
-of the auth-request backend. If you need more complex processing of the
-request forward the auth-request to a separate haproxy *frontend* that
-performs the required modifications to the request and response.
+backend that is either marked as `UP` or that does not have checks enabled.
+This allows for basic health checking of the auth-request backend. If you
+need more complex processing of the request forward the auth-request to a
+separate haproxy *frontend* that performs the required modifications to the
+request and response.
 
 The requested URL is the one given in the second parameter.
 
