@@ -22,37 +22,6 @@
 
 local http = require("socket.http")
 
---- Monkey Patches around bugs in haproxy's Socket class
--- This function calls core.tcp(), fixes a few methods and
--- returns the resulting socket.
--- @return Socket
-function create_sock()
-	local sock = core.tcp()
-
-	-- https://www.mail-archive.com/haproxy@formilux.org/msg28574.html
-	sock.old_receive = sock.receive
-	sock.receive = function(socket, pattern, prefix)
-		local a, b
-		if pattern == nil then pattern = "*l" end
-		if prefix == nil then
-			a, b = sock:old_receive(pattern)
-		else
-			a, b = sock:old_receive(pattern, prefix)
-		end
-		return a, b
-	end
-
-	-- https://www.mail-archive.com/haproxy@formilux.org/msg28604.html
-	sock.old_settimeout = sock.settimeout
-	sock.settimeout = function(socket, timeout)
-		socket:old_settimeout(timeout)
-
-		return 1
-	end
-
-	return sock
-end
-
 core.register_action("auth-request", { "http-req" }, function(txn, be, path)
 	txn:set_var("txn.auth_response_successful", false)
 
@@ -98,7 +67,7 @@ core.register_action("auth-request", { "http-req" }, function(txn, be, path)
 	local b, c, h = http.request {
 		url = "http://" .. addr .. path,
 		headers = headers,
-		create = create_sock,
+		create = core.tcp,
 		-- Disable redirects, because DNS does not work here.
 		redirect = false
 	}

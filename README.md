@@ -9,7 +9,7 @@ for nginx.
 
 ### Required
 
-- haproxy 1.8.0+
+- haproxy 1.8.4+
 - `USE_LUA=1` set at compile time.
 - LuaSocket with commit [0b03eec16b](https://github.com/diegonehab/luasocket/commit/0b03eec16be0b3a5efe71bcb8887719d1ea87d60) (that is: newer than 2014-11-10) in your Lua library path (`LUA_PATH`).
   - `lua-socket` from Debian Stretch works.
@@ -19,10 +19,6 @@ for nginx.
   - `luasocket` from luarocks *does not* work.
   - `lua-socket` v3.0.0.17.rc1 from EPEL *does not* work.
   - `lua-socket` from Fedora 28 *does not* work.
-
-### Recommended
-
-- haproxy 1.8.4+ for IPv6 support, see [Known Limitations](#known-limitations).
 
 ## Set-Up
 
@@ -81,9 +77,5 @@ to `500 Internal Server Error`.
   or load balancing of any kind.
 - The response headers of the subrequest are not exposed outside the script.
 - The backend must not be using TLS.
-- IPv6 is only supported in haproxy 1.8.4+ (released on 2018-02-08), due
-  [to a bug][2]. You can [monkeypatch by reverting commit 57950b4][3].
 
 [1]: http://nginx.org/en/docs/http/ngx_http_auth_request_module.html
-[2]: http://git.haproxy.org/?p=haproxy-1.8.git;a=commit;h=9db449a701cd9e43a04f49e2e477193fa5636323
-[3]: https://github.com/TimWolla/haproxy-auth-request/commit/57950b4639542ba429e54b959604e33237c6cffe
