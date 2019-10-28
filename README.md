@@ -74,6 +74,10 @@ of the subrequest will be returned in `txn.auth_response_code`. If the
 subrequest does not return a valid HTTP response the status code is set
 to `500 Internal Server Error`.
 
+Iff the auth backend returns a status code indicating a redirect (301, 302, 303,
+307, or 308) the `txn.auth_response_location` variable will be filled with the
+contents of the `location` response header.
+
 ## Known limitations
 
 - The Lua script only supports basic health checking, without redispatching
