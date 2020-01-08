@@ -11,7 +11,7 @@ Vcs-Browser: https://github.com/TimWolla/haproxy-auth-request.git
 Package: haproxy-auth-request
 Architecture: all
 Depends: ${misc:Depends},
-         lua-socket
+         lua-json
 Suggests: haproxy
 Description: HTTP access control using subrequests
  auth-request allows you to add access control to your HTTP services based
