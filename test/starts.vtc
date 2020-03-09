@@ -1,0 +1,23 @@
+varnishtest "Verify that HAProxy starts with auth-request.lua loaded."
+feature ignore_unknown_macro
+
+server s1 {
+   rxreq
+   txresp
+} -start
+
+haproxy h1 -conf {
+    global
+        lua-load ${auth_request_root}/auth-request.lua
+
+    listen fe1
+        mode http
+        bind "fd@${fe1}"
+        server s1 ${s1_addr}:${s1_port}
+} -start
+
+client c1 -connect ${h1_fe1_sock} {
+    txreq
+    rxresp
+    expect resp.status == 200
+} -run
