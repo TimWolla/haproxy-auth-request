@@ -94,4 +94,38 @@ core.register_action("auth-request", { "http-req" }, function(txn, be, path)
 	elseif c ~= 401 and c ~= 403 then
 		txn:Warning("Invalid status code in auth-request backend '" .. be .. "': " .. c)
 	end
+
+	-- Copy the auth response headers in txn.auth_response_header.* and build a
+	-- comma-seaparted list of header names to ease debugging. Header names are
+	-- normalized to fit with HAProxy's variable naming scheme.
+	--
+	-- The normalization process is as follows:
+	-- * Strip leading dots
+	-- * Replace dots, dashes, and spaces with underscores
+	-- * Remove any characters that are not letters, numbers, or underscores
+	-- * Convert the string to lower case
+	local names = ""
+	for name, value in pairs(h) do
+		-- Normalize the header name
+		name = name:gsub("^\\.+", "")
+		name = name:gsub("[- \\.]", "_")
+		name = name:gsub("[^a-zA-Z0-9_]", "")
+		name = name:lower()
+
+		-- Store each header in a new variable. There is a slight risk of
+		-- naming collisions in cases such as X-foo_bar.baz and x-Foo.bar-baz
+		-- being returned by the 
+		txn:set_var("txn.auth_response_header." .. name, value)
+
+		-- Append to list of generated header names
+		names = names .. "," .. name
+	end
+
+	-- Strip leading comma from list of names
+	names = names:gsub("^,", "")
+	txn:set_var("txn.auth_response_header_names", names)
+
+	-- Consider returning the subrequest body as well.
+	-- txn:set_var("txn.auth_response_body", b)
+
 end, 2)

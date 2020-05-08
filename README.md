@@ -75,11 +75,24 @@ Iff the auth backend returns a status code indicating a redirect (301, 302, 303,
 307, or 308) the `txn.auth_response_location` variable will be filled with the
 contents of the `location` response header.
 
+The auth backend's response headers are returned as individual variables
+starting with `txn.auth_request_header.*`. All of the returned header names
+are normalized by stripping leading dots, replacing all dots, dashes, and
+spaces with underscores, removing all characters other than alphanumerics and
+underscores, then lower-casing the resulting header name. This name is then
+used to create the variable name.
+
+For example, the `X-Example-Foo Bar!` header will be converted to
+`x_example_foo_bar`, and it will be made available in the
+`txn.auth_request_header.x_example_foo_bar` variable.
+
+To avoid ambiguity, a comma-separated list of headers is returned in the
+`txn.auth_request_header_names` variable.
+
 ## Known limitations
 
 - The Lua script only supports basic health checking, without redispatching
   or load balancing of any kind.
-- The response headers of the subrequest are not exposed outside the script.
 - The backend must not be using TLS.
 
 [1]: http://nginx.org/en/docs/http/ngx_http_auth_request_module.html
