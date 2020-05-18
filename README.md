@@ -34,7 +34,41 @@ backend auth_request
 	mode http
 	server auth_request 127.0.0.1:8080 check
 ```
-3. Execute the subrequest in your frontend (as early as possible):
+3. Define and Execute the subrequest in your frontend (as early as possible):
+```
+frontend http
+	mode http
+	bind :::80 v4v6
+	# *snip*
+
+	# Define a named configuration
+	# 					          		Config	Backend			Path to request
+	http-request lua.auth-request 		ABE		auth_request	/is-allowed
+
+	# Store extra response headers from the backend if needed
+	#									Config	Store in Var	Returned Header
+	http-request lua.auth-set-header	ABE		txn.my_var		x-auth-specific
+	http-request lua.auth-set-header	ABE		txn.other_var	x-auth-extra
+
+	# Execute the subrequest
+	http-request lua.auth-execute-subrequest ABE
+```
+4. Act on the subrequest results using the transaction variables set by the
+script. The `txn.auth_response_successful`, `txn.auth_response_code`, and
+`txn.auth_response_location` variables are implicitly set, in additon to any
+varibles set by the header mappings:
+```
+frontend http
+	# *snip*
+	
+	http-request deny if ! { var(txn.auth_response_successful) -m bool }
+```
+
+## Unnamed Auth Backend
+For brevity and backwards compatibility, it is possible to execute a subrequest
+without specifying a named auth backend and defining variables. This only
+sets the `txn.auth_response_successful`, `txn.auth_response_code`, and
+`txn.auth_response_location` variables.
 ```
 frontend http
 	mode http
@@ -43,13 +77,6 @@ frontend http
 
 	#                             Backend name     Path to request
 	http-request lua.auth-request auth_request     /is-allowed
-```
-4. Act on the results:
-```
-frontend http
-	# *snip*
-	
-	http-request deny if ! { var(txn.auth_response_successful) -m bool }
 ```
 
 ## The Details
@@ -75,19 +102,11 @@ Iff the auth backend returns a status code indicating a redirect (301, 302, 303,
 307, or 308) the `txn.auth_response_location` variable will be filled with the
 contents of the `location` response header.
 
-The auth backend's response headers are returned as individual variables
-starting with `txn.auth_request_header.*`. All of the returned header names
-are normalized by stripping leading dots, replacing all dots, dashes, and
-spaces with underscores, removing all characters other than alphanumerics and
-underscores, then lower-casing the resulting header name. This name is then
-used to create the variable name.
-
-For example, the `X-Example-Foo Bar!` header will be converted to
-`x_example_foo_bar`, and it will be made available in the
-`txn.auth_request_header.x_example_foo_bar` variable.
-
-To avoid ambiguity, a comma-separated list of headers is returned in the
-`txn.auth_request_header_names` variable.
+If any `auth-set-header` directives are defined for the configuration, headers
+returned by the auth backend will be stored in their corresponding transaction
+variables. If the header is not present in the response, its corresponding
+variable is left unset. Note that header matching is case-insensitive, so
+`X-Auth-EXTRA` will match `x-auth-extra`.
 
 ## Known limitations
 

@@ -20,9 +20,133 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 -- SOFTWARE.
 
+
+-- Define, customize, and execute subrequests for purposes of authenticating
+-- incoming requests. Registers functions for creating backends (auth-backend),
+-- storing response headers in variables (auth-set-header), and executing the
+-- subrequest (auth-execute-subrequst).
+--
+-- For compatibility and brevity, an extra function is provided to create and
+-- execute a request (auth-request) in a single directive without having to go
+-- through the individual steps of creation, customization, and execution.
+--
+-- Multiple configurations can also be created to handle circumstances where
+-- many backends must be queried, possibly conditionally.
+
 local http = require("socket.http")
 
-core.register_action("auth-request", { "http-req" }, function(txn, be, path)
+-- Creates an empty auth backend structure. Header mappings are filled in later.
+function _create_backend(name, backend_name, backend_path)
+	local auth_backend = {}
+	auth_backend["name"] = name
+	auth_backend["backend_name"] = backend_name
+	auth_backend["backend_path"] = backend_path
+	auth_backend["header_mapping"] = {}
+
+	return auth_backend
+end
+
+
+-- Create a new backend with an empty header mapping.
+-- The Header Mapping must be filled in with the auth_set_header function.
+function auth_backend(txn, name, backend_name, backend_path)
+	-- Set up the local auth_backends variable if it doesn't already exist
+	local auth_backends = txn:get_priv()
+	if auth_backends == nil then
+		auth_backends = {}
+		txn:set_priv(auth_backends)
+	end
+	
+	if type(auth_backends) ~= 'table' then
+		txn:Alert("Auth Backends is not a table. Possibly competing with another script.")
+		txn:set_var("txn.auth_response_code", 500)
+		return
+	end
+	
+	-- Create a new object to accumulate the backend's settings.
+	local auth_backend = auth_backends[name]
+	if auth_backend == nil then
+		auth_backend = _create_backend(name, backend_name, backend_path)
+
+		-- Add the new backend definition to the local transaction value
+		auth_backends[name] = auth_backend
+	else
+		txn:Alert("Redeclaration of auth configuration '" .. name .. "'")
+		txn:set_var("txn.auth_response_code", 500)
+	end
+end
+core.register_action("auth-backend", { "http-req" }, auth_backend, 3)
+
+
+-- Internal function for normalizing header names. Normalization is a simple
+-- Lower-Case for now.
+--
+-- Note that other transformations are possible, which could be beneficial for
+-- backends that return slightly inconsistent header names, or for automatically
+-- generated returns.
+-- 
+-- Leave these commented for now, and consider switching them on conditionally.
+function _normalize_header_name(name)
+	-- name = name:gsub("^\\.+", "")
+	-- name = name:gsub("[- \\.]", "_")
+	-- name = name:gsub("[^a-zA-Z0-9_]", "")
+	name = name:lower()
+
+	return name
+end
+
+
+-- Add or replace a mapping from returned header to a transaction variable.
+-- Variables added to a named configuration will be set if a matching header is
+-- returned by the auth backend.
+function auth_set_header(txn, name, output_name, header_name)
+	-- Fetch and sanity-check the named auth backend.
+	local auth_backends = txn:get_priv()
+	if auth_backends == nil then
+		txn:Alert("No auth backends are defined.")
+		txn:set_var("txn.auth_response_code", 500)
+		return
+	end
+	
+	if type(auth_backends) ~= 'table' then
+		txn:Alert("Auth Backends is not a table. Possibly clobbered by another script.")
+		txn:set_var("txn.auth_response_code", 500)
+		return
+	end
+
+	local auth_backend = auth_backends[name]
+	if auth_backend == nil then
+		txn:Alert("The auth configuration named '" .. name .. "' is not defined.")
+		txn:set_var("txn.auth_response_code", 500)
+		return
+	end
+
+	-- Add the header mapping, or replace it if it exists.
+	local normalized_name = _normalize_header_name(header_name)
+	auth_backend["header_mapping"][normalized_name] = output_name
+end
+core.register_action("auth-set-header", { "http-req" }, auth_set_header, 3)
+
+
+-- Internal function for executing subrequests. Dispatches request based upon
+-- the provided configuration object, setting the following transaction
+-- variables:
+--   - txn.auth_response_code
+--   - txn.auth_response_location
+--   - txn.auth_response_successful
+--
+-- If the configuration specifies any header-to-variable mappings, set them as
+-- well.
+function _execute_subrequest(txn, subrequest_config)
+	local be = subrequest_config["backend_name"]
+	if be == nil then
+		txn:Alert("Backend name not defined for subrequest " .. subrequest_config["name"])
+		txn:set_var("txn.auth_response_code", 500)
+		return
+	end
+
+	local path = subrequest_config["backend_path"]
+
 	txn:set_var("txn.auth_response_successful", false)
 
 	-- Check whether the given backend exists.
@@ -64,7 +188,7 @@ core.register_action("auth-request", { "http-req" }, function(txn, be, path)
 	end
 
 	-- Make request to backend.
-	local b, c, h = http.request {
+	local b, c, response_headers = http.request {
 		url = "http://" .. addr .. path,
 		headers = headers,
 		create = core.tcp,
@@ -89,43 +213,61 @@ core.register_action("auth-request", { "http-req" }, function(txn, be, path)
 	-- Don't allow other codes.
 	-- Codes with Location: Passthrough location at redirect.
 	elseif c == 301 or c == 302 or c == 303 or c == 307 or c == 308 then
-		txn:set_var("txn.auth_response_location", h["location"])
+		txn:set_var("txn.auth_response_location", response_headers["location"])
 	-- 401 / 403: Do nothing, everything else: log.
 	elseif c ~= 401 and c ~= 403 then
 		txn:Warning("Invalid status code in auth-request backend '" .. be .. "': " .. c)
 	end
-
-	-- Copy the auth response headers in txn.auth_response_header.* and build a
-	-- comma-seaparted list of header names to ease debugging. Header names are
-	-- normalized to fit with HAProxy's variable naming scheme.
-	--
-	-- The normalization process is as follows:
-	-- * Strip leading dots
-	-- * Replace dots, dashes, and spaces with underscores
-	-- * Remove any characters that are not letters, numbers, or underscores
-	-- * Convert the string to lower case
-	local names = ""
-	for name, value in pairs(h) do
-		-- Normalize the header name
-		name = name:gsub("^\\.+", "")
-		name = name:gsub("[- \\.]", "_")
-		name = name:gsub("[^a-zA-Z0-9_]", "")
-		name = name:lower()
-
-		-- Store each header in a new variable. There is a slight risk of
-		-- naming collisions in cases such as X-foo_bar.baz and x-Foo.bar-baz
-		-- being returned by the 
-		txn:set_var("txn.auth_response_header." .. name, value)
-
-		-- Append to list of generated header names
-		names = names .. "," .. name
+	
+	-- If any header mappings are specified, iterate over the returned headers
+	-- and try to return them. Return early if nothing has been specified.
+	local mappings = subrequest_config["header_mapping"]
+	if (header_mapping == nil) or (header_mapping == {}) then
+		return
 	end
 
-	-- Strip leading comma from list of names
-	names = names:gsub("^,", "")
-	txn:set_var("txn.auth_response_header_names", names)
+	for header_name, value in pairs(response_headers) do
+		normalized_name = _normalize_header_name(header_name)
+		local mapping = mappings[normalized_name]
 
-	-- Consider returning the subrequest body as well.
-	-- txn:set_var("txn.auth_response_body", b)
+		if mapping ~= nil then
+			txn:set_var(mapping, value)
+		end
+	end
+end
 
-end, 2)
+
+-- Execute a subrequest and copy any mapped headers to transaction variables.
+-- Retrieves configuration object and hands off to _execute_subrequest.
+function auth_execute_subrequest(txn, name)
+	-- TODO Validation/sanity check
+	local auth_backends = txn:get_priv()
+	if auth_backends == nil then
+		txn:Alert("Auth Backends are not defined.")
+		txn:set_var("txn.auth_response_code", 500)
+		return
+	end
+	
+	local auth_backend = auth_backends[name]
+	if auth_backend == nil then
+		txn:Alert("No auth configuration named '" .. name .. "'.")
+		txn:set_var("txn.auth_response_code", 500)
+		return
+	end
+
+	_execute_subrequest(txn, auth_backend)
+end
+core.register_action("auth-execute-subrequest", { "http-req" }, auth_execute_subrequest, 1)
+
+
+-- Compatibility shim for original syntax. Does not save any headers, and only
+-- sets the txn.auth_response_code, txn.auth_response_location, and
+-- txn.auth_response_successful variables.
+-- 
+-- Creates an anonymous configuration object and passes it to
+-- _execute_subrequest
+function auth_request(txn, backend_name, path)
+	local auth_backend = _create_backend(backend_name .. path, backend_name, path)
+	_execute_subrequest(txn, auth_backend)
+end
+core.register_action("auth-request", { "http-req" }, auth_request, 2)
