@@ -1,0 +1,37 @@
+varnishtest "Verify that a successful request allows access."
+feature ignore_unknown_macro
+
+server s1 {
+    rxreq
+    txresp
+} -start
+
+server s_auth_backend {
+    rxreq
+    txresp \
+        -status 204
+} -start
+
+haproxy h1 -conf {
+    global
+        lua-load ${auth_request_root}/auth-request.lua
+
+    listen fe1
+        mode http
+        bind "fd@${fe1}"
+
+        http-request lua.auth-request auth_backend /allow
+        http-request deny if ! { var(txn.auth_response_successful) -m bool }
+
+        server s1 ${s1_addr}:${s1_port}
+
+    backend auth_backend
+        mode http
+        server auth_backend ${s_auth_backend_addr}:${s_auth_backend_port}
+} -start
+
+client c1 -connect ${h1_fe1_sock} {
+    txreq
+    rxresp
+    expect resp.status == 200
+} -run
