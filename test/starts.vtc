@@ -2,8 +2,8 @@ varnishtest "Verify that HAProxy starts with auth-request.lua loaded."
 feature ignore_unknown_macro
 
 server s1 {
-   rxreq
-   txresp
+    rxreq
+    txresp
 } -start
 
 haproxy h1 -conf {

@@ -1,0 +1,70 @@
+varnishtest "Verify that location header is exposed for redirects."
+feature ignore_unknown_macro
+
+server s1 {
+    rxreq
+    txresp
+} -repeat 4 -start
+
+server s_auth_backend {
+    rxreq
+    txresp \
+        -status 301 \
+        -hdr "location: https://example.com"
+
+    accept
+    rxreq
+    txresp \
+        -status 303 \
+        -hdr "location: https://example.com"
+
+    accept
+    rxreq
+    txresp \
+        -status 307 \
+        -hdr "location: https://example.com"
+
+    accept
+    rxreq
+    txresp \
+        -status 200 \
+        -hdr "location: https://example.com"
+} -start
+
+haproxy h1 -conf {
+    global
+        lua-load ${auth_request_root}/auth-request.lua
+
+    listen fe1
+        mode http
+        bind "fd@${fe1}"
+
+        http-request lua.auth-request auth_backend /allow
+        http-response set-header x-status %[var(txn.auth_response_code)]
+        http-response set-header x-location %[var(txn.auth_response_location)] if { var(txn.auth_response_location) -m found }
+
+        server s1 ${s1_addr}:${s1_port}
+
+    backend auth_backend
+        mode http
+        server auth_backend ${s_auth_backend_addr}:${s_auth_backend_port}
+} -start
+
+client c1 -connect ${h1_fe1_sock} {
+    txreq
+    rxresp
+    expect resp.http.x-status == 301
+    expect resp.http.x-location == "https://example.com"
+    txreq
+    rxresp
+    expect resp.http.x-status == 303
+    expect resp.http.x-location == "https://example.com"
+    txreq
+    rxresp
+    expect resp.http.x-status == 307
+    expect resp.http.x-location == "https://example.com"
+    txreq
+    rxresp
+    expect resp.http.x-status == 200
+    expect resp.http.x-location == "<undef>"
+} -run
