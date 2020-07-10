@@ -41,4 +41,9 @@ jobs:
         make -C VTest -j$(nproc) FLAGS="-O2 -s -Wall"
         sudo install -m755 VTest/vtest /usr/bin/vtest
     - name: Run tests.
-      run: vtest -Dauth_request_root=$(pwd) -k -t 10 test/*.vtc
+      run: |
+        ls -alh
+        ls -alh haproxy/
+        ls -alh haproxy/scripts/
+        ls -alh haproxy/scripts/run-regtests.sh
+        haproxy/scripts/run-regtests.sh

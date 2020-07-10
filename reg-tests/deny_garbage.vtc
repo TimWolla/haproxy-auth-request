@@ -1,4 +1,4 @@
-varnishtest "Verify that a successful request allows access."
+varnishtest "Verify that a backend sending garbage denies access."
 feature ignore_unknown_macro
 
 server s1 {
@@ -7,14 +7,12 @@ server s1 {
 } -start
 
 server s_auth_backend {
-    rxreq
-    txresp \
-        -status 204
+    send foo
 } -start
 
 haproxy h1 -conf {
     global
-        lua-load ${auth_request_root}/auth-request.lua
+        lua-load ${testdir}/../auth-request.lua
 
     listen fe1
         mode http
@@ -33,5 +31,5 @@ haproxy h1 -conf {
 client c1 -connect ${h1_fe1_sock} {
     txreq
     rxresp
-    expect resp.status == 200
+    expect resp.status == 403
 } -run
