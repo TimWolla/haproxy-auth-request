@@ -17,6 +17,7 @@ jobs:
         - "2.0"
         - "2.1"
         - "2.2"
+      fail-fast: false
     steps:
     - uses: actions/checkout@v2
     - name: Install apt dependencies.
