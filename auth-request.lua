@@ -22,13 +22,32 @@
 
 local http = require("socket.http")
 
+function set_var_pre_2_2(txn, var, value)
+	return txn:set_var(var, value)
+end
+function set_var_post_2_2(txn, var, value)
+	return txn:set_var(var, value, true)
+end
+
+set_var = function(txn, var, value)
+	local success = pcall(set_var_post_2_2, txn, var, value)
+	if success then
+		set_var = set_var_post_2_2
+	else
+		set_var = set_var_pre_2_2
+	end
+
+	return set_var(txn, var, value)
+end
+
+
 core.register_action("auth-request", { "http-req" }, function(txn, be, path)
-	txn:set_var("txn.auth_response_successful", false)
+	set_var(txn, "txn.auth_response_successful", false)
 
 	-- Check whether the given backend exists.
 	if core.backends[be] == nil then
 		txn:Alert("Unknown auth-request backend '" .. be .. "'")
-		txn:set_var("txn.auth_response_code", 500)
+		set_var(txn, "txn.auth_response_code", 500)
 		return
 	end
 
@@ -44,7 +63,7 @@ core.register_action("auth-request", { "http-req" }, function(txn, be, path)
 	end
 	if addr == nil then
 		txn:Warning("No servers available for auth-request backend: '" .. be .. "'")
-		txn:set_var("txn.auth_response_code", 500)
+		set_var(txn, "txn.auth_response_code", 500)
 		return
 	end
 
@@ -77,19 +96,19 @@ core.register_action("auth-request", { "http-req" }, function(txn, be, path)
 	-- Check whether we received a valid HTTP response.
 	if b == nil then
 		txn:Warning("Failure in auth-request backend '" .. be .. "': " .. c)
-		txn:set_var("txn.auth_response_code", 500)
+		set_var(txn, "txn.auth_response_code", 500)
 		return
 	end
 
-	txn:set_var("txn.auth_response_code", c)
+	set_var(txn, "txn.auth_response_code", c)
 
 	-- 2xx: Allow request.
 	if 200 <= c and c < 300 then
-		txn:set_var("txn.auth_response_successful", true)
+		set_var(txn, "txn.auth_response_successful", true)
 	-- Don't allow other codes.
 	-- Codes with Location: Passthrough location at redirect.
 	elseif c == 301 or c == 302 or c == 303 or c == 307 or c == 308 then
-		txn:set_var("txn.auth_response_location", h["location"])
+		set_var(txn, "txn.auth_response_location", h["location"])
 	-- 401 / 403: Do nothing, everything else: log.
 	elseif c ~= 401 and c ~= 403 then
 		txn:Warning("Invalid status code in auth-request backend '" .. be .. "': " .. c)
