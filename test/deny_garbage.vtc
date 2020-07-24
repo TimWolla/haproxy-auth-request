@@ -4,10 +4,29 @@ feature ignore_unknown_macro
 server s1 {
     rxreq
     txresp
-} -start
+} -repeat 7 -start
 
 server s_auth_backend {
-    send foo
+    rxreq
+    send "foo"
+    accept
+    rxreq
+    send "foo\r\n"
+    accept
+    rxreq
+    send "HTTP/1.0 200 Ok"
+    accept
+    rxreq
+    send "HTTP\r\n"
+    accept
+    rxreq
+    send "HTTP/1\r\n"
+    accept
+    rxreq
+    send "HTTP/1.0 200 Ok\r\n"
+    accept
+    rxreq
+    send "HTTP/1.0 XXX Fail\r\n\r\n"
 } -start
 
 haproxy h1 -conf {
@@ -32,4 +51,4 @@ client c1 -connect ${h1_fe1_sock} {
     txreq
     rxresp
     expect resp.status == 403
-} -run
+} -repeat 7 -run
