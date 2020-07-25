@@ -33,7 +33,7 @@ server s_auth_backend {
 
 haproxy h1 -conf {
     global
-        lua-load ${auth_request_root}/auth-request.lua
+        lua-load ${testdir}/../auth-request.lua
 
     listen fe1
         mode http

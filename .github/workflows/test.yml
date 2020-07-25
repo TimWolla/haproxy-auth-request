@@ -45,4 +45,4 @@ jobs:
         make -C VTest -j$(nproc) FLAGS="-O2 -s -Wall"
         sudo install -m755 VTest/vtest /usr/bin/vtest
     - name: Run tests using HAProxy ${{ steps.install-haproxy.outputs.version }}
-      run: vtest -Dauth_request_root=$(pwd) -Dhaproxy_version=${{ steps.install-haproxy.outputs.version }} -k -t 10 test/*.vtc
+      run: vtest -Dhaproxy_version=${{ steps.install-haproxy.outputs.version }} -k -t 10 test/*.vtc
