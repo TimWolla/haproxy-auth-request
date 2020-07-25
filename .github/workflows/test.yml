@@ -22,21 +22,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install apt dependencies.
-      run: |
-        sudo apt-get install -y liblua5.3-dev lua-socket
+      run: sudo apt-get install -y lua-socket
     - name: Install HAProxy ${{ matrix.haproxy-versions }}.
+      uses: timwolla/action-install-haproxy@main
       id: install-haproxy
-      run: |
-        echo ::group::Download, compile and install HAProxy ${{ matrix.haproxy-versions }}.
-        curl -fsSL http://www.haproxy.org/download/${{ matrix.haproxy-versions }}/src/snapshot/haproxy-ss-LATEST.tar.gz -o haproxy.tar.gz
-        mkdir haproxy
-        tar xvf haproxy.tar.gz -C haproxy --strip-components=1
-        make -C haproxy -j$(nproc) all TARGET=linux-glibc USE_LUA=1
-        sudo make -C haproxy install
-        echo ::endgroup::
-
-        haproxy -vv
-        echo "::set-output name=version::$(haproxy -v |awk 'NR==1{print $3}')"
+      with:
+        branch: ${{ matrix.haproxy-versions }}
+        use_lua: yes
     - name: Install VTest.
       run: |
         curl -fsSL https://github.com/vtest/VTest/archive/master.tar.gz -o VTest.tar.gz
