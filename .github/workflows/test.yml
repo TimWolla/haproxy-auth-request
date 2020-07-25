@@ -28,13 +28,7 @@ jobs:
       id: install-haproxy
       with:
         branch: ${{ matrix.haproxy-versions }}
+        install_vtest: yes
         use_lua: yes
-    - name: Install VTest.
-      run: |
-        curl -fsSL https://github.com/vtest/VTest/archive/master.tar.gz -o VTest.tar.gz
-        mkdir VTest
-        tar xvf VTest.tar.gz -C VTest --strip-components=1
-        make -C VTest -j$(nproc) FLAGS="-O2 -s -Wall"
-        sudo install -m755 VTest/vtest /usr/bin/vtest
     - name: Run tests using HAProxy ${{ steps.install-haproxy.outputs.version }}
       run: vtest -Dhaproxy_version=${{ steps.install-haproxy.outputs.version }} -k -t 10 test/*.vtc
