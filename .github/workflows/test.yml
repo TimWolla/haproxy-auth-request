@@ -20,9 +20,6 @@ jobs:
         - "2.3"
       fail-fast: false
     steps:
-    - uses: actions/checkout@v2
-    - name: Install apt dependencies.
-      run: sudo apt-get install -y lua-socket
     - name: Install HAProxy ${{ matrix.haproxy-versions }}.
       uses: timwolla/action-install-haproxy@main
       id: install-haproxy
@@ -30,5 +27,8 @@ jobs:
         branch: ${{ matrix.haproxy-versions }}
         install_vtest: yes
         use_lua: yes
-    - name: Run tests using HAProxy ${{ steps.install-haproxy.outputs.version }}
+    - name: Install apt dependencies.
+      run: sudo apt-get install -y lua-socket
+    - uses: actions/checkout@v2
+    - name: Run tests using HAProxy ${{ steps.install-haproxy.outputs.version }}.
       run: vtest -Dhaproxy_version=${{ steps.install-haproxy.outputs.version }} -k -t 10 test/*.vtc
