@@ -34,7 +34,10 @@ jobs:
       env:
         HAPROXY_VERSION: ${{ matrix.haproxy-versions }}
     - name: Show HAProxy version.
-      run: haproxy -vv
+      id: haproxy-version
+      run: |
+        haproxy -vv
+        echo "::set-output name=version::$(haproxy -v |awk 'NR==1{print $3}')"
     - name: Install VTest.
       run: |
         curl -fsSL https://github.com/vtest/VTest/archive/master.tar.gz -o VTest.tar.gz
@@ -42,5 +45,5 @@ jobs:
         tar xvf VTest.tar.gz -C VTest --strip-components=1
         make -C VTest -j$(nproc) FLAGS="-O2 -s -Wall"
         sudo install -m755 VTest/vtest /usr/bin/vtest
-    - name: Run tests.
-      run: vtest -Dauth_request_root=$(pwd) -Dhaproxy_version=$(haproxy -v |awk 'NR==1{print $3}') -k -t 10 test/*.vtc
+    - name: Run tests using HAProxy ${{ steps.haproxy-version.outputs.version }}
+      run: vtest -Dauth_request_root=$(pwd) -Dhaproxy_version=${{ steps.haproxy-version.outputs.version }} -k -t 10 test/*.vtc
