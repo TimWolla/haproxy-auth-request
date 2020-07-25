@@ -24,7 +24,7 @@ jobs:
     - name: Install apt dependencies.
       run: |
         sudo apt-get install -y liblua5.3-dev lua-socket
-    - name: Install HAProxy.
+    - name: Install HAProxy ${{ matrix.haproxy-versions }}.
       id: install-haproxy
       run: |
         echo ::group::Download, compile and install HAProxy ${{ matrix.haproxy-versions }}.
@@ -34,6 +34,7 @@ jobs:
         make -C haproxy -j$(nproc) all TARGET=linux-glibc USE_LUA=1
         sudo make -C haproxy install
         echo ::endgroup::
+
         haproxy -vv
         echo "::set-output name=version::$(haproxy -v |awk 'NR==1{print $3}')"
     - name: Install VTest.
