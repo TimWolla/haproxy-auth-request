@@ -25,17 +25,15 @@ jobs:
       run: |
         sudo apt-get install -y liblua5.3-dev lua-socket
     - name: Install HAProxy.
+      id: install-haproxy
       run: |
-        curl -fsSL http://www.haproxy.org/download/${HAPROXY_VERSION}/src/snapshot/haproxy-ss-LATEST.tar.gz -o haproxy.tar.gz
+        echo ::group::Download, compile and install HAProxy ${{ matrix.haproxy-versions }}.
+        curl -fsSL http://www.haproxy.org/download/${{ matrix.haproxy-versions }}/src/snapshot/haproxy-ss-LATEST.tar.gz -o haproxy.tar.gz
         mkdir haproxy
         tar xvf haproxy.tar.gz -C haproxy --strip-components=1
         make -C haproxy -j$(nproc) all TARGET=linux-glibc USE_LUA=1
         sudo make -C haproxy install
-      env:
-        HAPROXY_VERSION: ${{ matrix.haproxy-versions }}
-    - name: Show HAProxy version.
-      id: haproxy-version
-      run: |
+        echo ::endgroup::
         haproxy -vv
         echo "::set-output name=version::$(haproxy -v |awk 'NR==1{print $3}')"
     - name: Install VTest.
@@ -45,5 +43,5 @@ jobs:
         tar xvf VTest.tar.gz -C VTest --strip-components=1
         make -C VTest -j$(nproc) FLAGS="-O2 -s -Wall"
         sudo install -m755 VTest/vtest /usr/bin/vtest
-    - name: Run tests using HAProxy ${{ steps.haproxy-version.outputs.version }}
-      run: vtest -Dauth_request_root=$(pwd) -Dhaproxy_version=${{ steps.haproxy-version.outputs.version }} -k -t 10 test/*.vtc
+    - name: Run tests using HAProxy ${{ steps.install-haproxy.outputs.version }}
+      run: vtest -Dauth_request_root=$(pwd) -Dhaproxy_version=${{ steps.install-haproxy.outputs.version }} -k -t 10 test/*.vtc
