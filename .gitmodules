@@ -1,0 +1,4 @@
+[submodule "haproxy-lua-http"]
+	path = haproxy-lua-http
+	url = https://github.com/haproxytech/haproxy-lua-http.git
+	branch = master

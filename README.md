@@ -1,7 +1,7 @@
-# auth-request
+# auth-request ![Test](https://github.com/TimWolla/haproxy-auth-request/workflows/Test/badge.svg)
 
 auth-request allows you to add access control to your HTTP services based
-on a subrequest to a configured haproxy backend. The workings of this Lua
+on a subrequest to a configured HAProxy backend. The workings of this Lua
 script are loosely based on the [ngx_http_auth_request_module][1] module
 for nginx.
 
@@ -9,16 +9,12 @@ for nginx.
 
 ### Required
 
-- haproxy 1.8.4+
-- `USE_LUA=1` set at compile time.
-- LuaSocket with commit [0b03eec16b](https://github.com/diegonehab/luasocket/commit/0b03eec16be0b3a5efe71bcb8887719d1ea87d60) (that is: newer than 2014-11-10) in your Lua library path (`LUA_PATH`).
-  - `lua-socket` from Debian Stretch works.
-  - `lua-socket` from Ubuntu Xenial works.
-  - `lua-socket` from Ubuntu Bionic works.
-  - `lua5.3-socket` from Alpine 3.8 works.
-  - `luasocket` from luarocks *does not* work.
-  - `lua-socket` v3.0.0.17.rc1 from EPEL *does not* work.
-  - `lua-socket` from Fedora 28 *does not* work.
+- HAProxy 1.8.4+ (2.2.0+ recommended)
+  - Only the latest version of each HAProxy branch is supported.
+- `USE_LUA=1` must be set at compile time.
+- [haproxy-lua-http](https://github.com/haproxytech/haproxy-lua-http) must be available within the Lua path.
+  - A `json` library within the Lua path (dependency of haproxy-lua-http).
+  - With HAProxy 2.1.3+ you can use the [`lua-prepend-path`](http://cbonte.github.io/haproxy-dconv/2.1/configuration.html#lua-prepend-path) configuration option to specify the search path.
 
 ## Set-Up
 
@@ -26,6 +22,7 @@ for nginx.
 ```
 global
 	# *snip*
+	lua-prepend-path /usr/share/haproxy/?/http.lua # If haproxy-lua-http is saved as /usr/share/haproxy/haproxy-lua-http/http.lua
 	lua-load /usr/share/haproxy/auth-request.lua
 ```
 2. Define a backend that is used for the subrequests:

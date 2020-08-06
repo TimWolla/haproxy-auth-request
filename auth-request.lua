@@ -20,7 +20,7 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 -- SOFTWARE.
 
-local http = require("socket.http")
+local http = require("haproxy-lua-http")
 
 function set_var_pre_2_2(txn, var, value)
 	return txn:set_var(var, value)
@@ -83,34 +83,29 @@ core.register_action("auth-request", { "http-req" }, function(txn, be, path)
 	end
 
 	-- Make request to backend.
-	local b, c, h = http.request {
+	local response, err = http.head {
 		url = "http://" .. addr .. path,
 		headers = headers,
-		create = core.tcp,
-		-- Disable redirects, because DNS does not work here.
-		redirect = false,
-		-- We do not check body, so HEAD
-		method = "HEAD",
 	}
 
 	-- Check whether we received a valid HTTP response.
-	if b == nil then
-		txn:Warning("Failure in auth-request backend '" .. be .. "': " .. c)
+	if response == nil then
+		txn:Warning("Failure in auth-request backend '" .. be .. "': " .. err)
 		set_var(txn, "txn.auth_response_code", 500)
 		return
 	end
 
-	set_var(txn, "txn.auth_response_code", c)
+	set_var(txn, "txn.auth_response_code", response.status_code)
 
 	-- 2xx: Allow request.
-	if 200 <= c and c < 300 then
+	if 200 <= response.status_code and response.status_code < 300 then
 		set_var(txn, "txn.auth_response_successful", true)
 	-- Don't allow other codes.
 	-- Codes with Location: Passthrough location at redirect.
-	elseif c == 301 or c == 302 or c == 303 or c == 307 or c == 308 then
-		set_var(txn, "txn.auth_response_location", h["location"])
+	elseif response.status_code == 301 or response.status_code == 302 or response.status_code == 303 or response.status_code == 307 or response.status_code == 308 then
+		set_var(txn, "txn.auth_response_location", response.headers["location"])
 	-- 401 / 403: Do nothing, everything else: log.
-	elseif c ~= 401 and c ~= 403 then
-		txn:Warning("Invalid status code in auth-request backend '" .. be .. "': " .. c)
+	elseif response.status_code ~= 401 and response.status_code ~= 403 then
+		txn:Warning("Invalid status code in auth-request backend '" .. be .. "': " .. response.status_code)
 	end
 end, 2)
