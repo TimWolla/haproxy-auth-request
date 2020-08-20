@@ -66,6 +66,9 @@ client c1 -connect ${h1_fe1_sock} {
     txreq
     rxresp
     expect resp.status == 403
+} -run
+
+client c2 -connect ${h1_fe1_sock} {
     txreq
     rxresp
     expect resp.status == 200
