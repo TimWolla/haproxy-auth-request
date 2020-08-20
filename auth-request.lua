@@ -103,7 +103,7 @@ core.register_action("auth-request", { "http-req" }, function(txn, be, path)
 	-- Don't allow other codes.
 	-- Codes with Location: Passthrough location at redirect.
 	elseif response.status_code == 301 or response.status_code == 302 or response.status_code == 303 or response.status_code == 307 or response.status_code == 308 then
-		set_var(txn, "txn.auth_response_location", response.headers["location"])
+		set_var(txn, "txn.auth_response_location", response:get_header("location", "last"))
 	-- 401 / 403: Do nothing, everything else: log.
 	elseif response.status_code ~= 401 and response.status_code ~= 403 then
 		txn:Warning("Invalid status code in auth-request backend '" .. be .. "': " .. response.status_code)
