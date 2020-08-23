@@ -59,26 +59,52 @@ auth-request uses HAProxy variables to communicate the results back to you. The
 The following list of variables may be set.
 
 <dl>
-	<dt><code>txn.auth_response_successful</code></dt>
-	<dd>
-		Set to <code>true</code> if the subrequest returns an HTTP
-		status code in the <code>2xx</code> range. <code>false</code>
-		otherwise.
-	</dd>
-	<dt><code>txn.auth_response_code</code></dt>
-	<dd>
-		The HTTP status code of the subrequest. If the subrequest did
-		not return a valid HTTP response the value will be
-		<code>500</code>.
-	</dd>
-	<dt><code>txn.auth_response_location</code></dt>
-	<dd>
-		The <code>location</code> response header of the subrequest.
-		This variable is only set if the HTTP status code of the
-		subrequest indicates a redirect (i.e. <code>301</code>,
-		<code>302</code>, <code>303</code>, <code>307</code>, or
-		<code>308</code>).
-	</dd>
+<dt><code>txn.auth_response_successful</code></dt>
+<dd>
+Set to <code>true</code> if the subrequest returns an HTTP status code in the
+<code>2xx</code> range. <code>false</code> otherwise.
+</dd>
+
+<dt><code>txn.auth_response_code</code></dt>
+<dd>
+The HTTP status code of the subrequest. If the subrequest did not return a
+valid HTTP response the value will be <code>500</code>.
+</dd>
+
+<dt><code>txn.auth_response_location</code></dt>
+<dd>
+The <code>location</code> response header of the subrequest.
+
+This variable is only set if the HTTP status code of the subrequest indicates a
+redirect (i.e. <code>301</code>, <code>302</code>, <code>303</code>,
+<code>307</code>, or <code>308</code>).
+</dd>
+
+<dt><code>req.auth_response_header.*</code>
+<dd>
+These variables store the subrequest’s response headers. The values of
+duplicate response headers will be merged with a comma.
+
+HAProxy variables may only contain alphanumeric characters, the dot
+(<code>.</code>), and an underscore <code>_</code>. Any non-alphanumeric
+characters will be replaced with an underscore to be representable. If the
+response contains duplicate response headers <em>after</em> normalizing the
+header name the result for these headers will be undefined.
+
+Normalization examples:
+<dl>
+<dt><code>X-Authenticated-User</code></dt>
+<dd><code>req.auth_response_header.x_authenticated_user</code></dd>
+<dt><code>Success</code></dt>
+<dd><code>req.auth_response_header.success</code></dd>
+</dl>
+
+Please note: The scope of the response header variables is <code>req</code>
+compared to <code>txn</code> for the other variables. The contents will no
+longer be available during response processing to save memory. Copy the values
+of interest into a <code>txn.</code> variable if you need access them during
+response processing.
+</dd>
 </dl>
 
 ## Inner Workings
@@ -93,13 +119,13 @@ response.
 The requested URL is the one given in the second parameter.
 
 Any request headers will be forwarded as-is to the auth-request backend, with
-the exception of the `content-length` header which will be stripped.
+the exception of the `content-length` header which will be stripped, because
+the request body will not be forwarded.
 
 ## Known limitations
 
 - The Lua script only supports basic health checking, without redispatching or
   load balancing of any kind.
-- The response headers of the subrequest are not exposed outside the script.
 - The backend must not be using TLS.
 
 [ngx_http_auth_request_module]: http://nginx.org/en/docs/http/ngx_http_auth_request_module.html

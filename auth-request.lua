@@ -40,6 +40,10 @@ set_var = function(txn, var, value)
 	return set_var(txn, var, value)
 end
 
+function sanitize_header_for_variable(header)
+	return header:gsub("[^a-zA-Z0-9]", "_")
+end
+
 
 core.register_action("auth-request", { "http-req" }, function(txn, be, path)
 	set_var(txn, "txn.auth_response_successful", false)
@@ -96,6 +100,10 @@ core.register_action("auth-request", { "http-req" }, function(txn, be, path)
 	end
 
 	set_var(txn, "txn.auth_response_code", response.status_code)
+
+	for header, value in response:get_headers(true) do
+		set_var(txn, "req.auth_response_header." .. sanitize_header_for_variable(header), value)
+	end
 
 	-- 2xx: Allow request.
 	if 200 <= response.status_code and response.status_code < 300 then
