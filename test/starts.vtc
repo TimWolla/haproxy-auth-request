@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 varnishtest "Verify that HAProxy starts with auth-request.lua loaded."
 feature ignore_unknown_macro
 
