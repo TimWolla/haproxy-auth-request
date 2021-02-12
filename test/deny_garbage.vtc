@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 varnishtest "Verify that a backend sending garbage denies access."
 feature ignore_unknown_macro
 

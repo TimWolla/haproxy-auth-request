@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 varnishtest "Verify that arbitrary response headers are exposed."
 feature ignore_unknown_macro
 

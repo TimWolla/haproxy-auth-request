@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 default:
 
 install: auth-request.lua haproxy-lua-http/http.lua

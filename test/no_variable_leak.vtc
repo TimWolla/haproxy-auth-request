@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 varnishtest "Verify that we don't leak variables."
 feature ignore_unknown_macro
 feature cmd "dpkg --compare-versions ${haproxy_version} ge 2.2"

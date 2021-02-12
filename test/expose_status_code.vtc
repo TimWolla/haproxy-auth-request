@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 varnishtest "Verify that response status is exposed."
 feature ignore_unknown_macro
 
