@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: MIT
+
+varnishtest "Verify that multiple clients work fine for multi-threaded Lua."
+feature ignore_unknown_macro
+feature cmd "dpkg --compare-versions ${haproxy_version} ge 2.4"
+
+server s1 {
+    rxreq
+    txresp
+} -repeat 150 -start
+
+server s_auth_backend_allow {
+    rxreq
+    txresp \
+        -status 204
+} -repeat 100 -start
+
+server s_auth_backend_deny {
+    rxreq
+    txresp \
+        -status 403
+} -repeat 50 -start
+
+haproxy h1 -conf {
+    global
+        lua-prepend-path ${testdir}/../?/http.lua
+        lua-load-per-thread ${testdir}/../auth-request.lua
+
+    listen fe1
+        mode http
+        bind "fd@${fe1}"
+
+        http-request lua.auth-request auth_backend_allow /allow if { path /allow }
+        http-request lua.auth-request auth_backend_deny  /deny  if { path /deny }
+        http-request deny if ! { var(txn.auth_response_successful) -m bool }
+
+        server s1 ${s1_addr}:${s1_port}
+
+    backend auth_backend_allow
+        mode http
+        server auth_backend_allow ${s_auth_backend_allow_addr}:${s_auth_backend_allow_port}
+
+    backend auth_backend
+        mode http
+        server auth_backend_deny ${s_auth_backend_deny_addr}:${s_auth_backend_deny_port}
+} -start
+
+client c1 -connect ${h1_fe1_sock} {
+    txreq -url "/allow"
+    rxresp
+    expect resp.status == 200
+} -repeat 75 -run
+
+client c2 -connect ${h1_fe1_sock} {
+    txreq -url "/deny"
+    rxresp
+    expect resp.status == 403
+} -repeat 50 -run
+
+client c3 -connect ${h1_fe1_sock} {
+    txreq -url "/deny"
+    rxresp
+    expect resp.status == 403
+} -repeat 50 -run
+
+client c1 -connect ${h1_fe1_sock} {
+    txreq -url "/allow"
+    rxresp
+    expect resp.status == 200
+} -repeat 25 -run
