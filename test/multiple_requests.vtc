@@ -2,7 +2,6 @@
 
 varnishtest "Verify that multiple clients work fine."
 feature ignore_unknown_macro
-feature cmd "dpkg --compare-versions ${haproxy_version} ge 2.4"
 
 server s1 {
     rxreq
