@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: MIT
+
+varnishtest "Verify that filtered request headers are passed to the auth-intercept backend."
+feature ignore_unknown_macro
+feature cmd "dpkg --compare-versions ${haproxy_version} ge 2.2"
+
+server s1 {
+    rxreq
+    expect req.http.x-user == "logan"
+    expect req.http.x-app-data == "secret"
+    expect req.http.token == "bearer value"
+    txresp \
+        -status 201 \
+        -hdr "x-field: value"
+} -start
+
+server s_auth_backend {
+    rxreq
+    expect req.http.x-app-data == "<undef>"
+    expect req.http.token == "bearer value"
+    txresp \
+        -status 401 \
+        -hdr "x-reason: invalid pwd"
+
+    accept
+    rxreq
+    expect req.http.x-app-data == "<undef>"
+    expect req.http.token == "bearer value"
+    txresp \
+        -status 200 \
+        -hdr "x-user: logan"
+} -start
+
+haproxy h1 -conf {
+    global
+        lua-load ${testdir}/../auth-request.lua
+
+    listen fe1
+        mode http
+        bind "fd@${fe1}"
+        http-request lua.auth-intercept auth_backend / HEAD token x-user x-reason
+        server s1 ${s1_addr}:${s1_port}
+
+    backend auth_backend
+        mode http
+        server auth_backend ${s_auth_backend_addr}:${s_auth_backend_port}
+} -start
+
+client c1 -connect ${h1_fe1_sock} {
+    txreq \
+        -hdr "x-user: try-to-override" \
+        -hdr "x-app-data: secret" \
+        -hdr "token: bearer value"
+    rxresp
+    expect resp.status == 401
+    expect resp.http.x-reason == "invalid pwd"
+    expect resp.http.x-field == "<undef>"
+
+    txreq \
+        -hdr "x-user: try-to-override" \
+        -hdr "x-app-data: secret" \
+        -hdr "token: bearer value"
+    rxresp
+    expect resp.status == 201
+    expect resp.http.x-reason == "<undef>"
+    expect resp.http.x-field == "value"
+} -run

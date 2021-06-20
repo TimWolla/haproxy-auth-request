@@ -39,8 +39,13 @@ loosely based on the [ngx_http_auth_request_module] module for nginx.
 
         # *snip*
 
+        # auth-request syntax:
         #                             Backend name     Path to request
         http-request lua.auth-request auth_request     /is-allowed
+
+        # auth-intercept syntax:                                           (Headers to copy)
+        #                               Backend name  Path         Method  Request  Success  Failure
+        http-request lua.auth-intercept auth_request  /is-allowed  HEAD    *        -        -
     ```
 
 4. Act on the results:
@@ -50,6 +55,51 @@ loosely based on the [ngx_http_auth_request_module] module for nginx.
 
         http-request deny if ! { var(txn.auth_response_successful) -m bool }
     ```
+
+### Parameters
+
+The scripts receive a list of parameters used to build the authentication
+request:
+
+* **Backend name**: is the name of an HAProxy backend. See the
+[Inner Workings](#inner-workings) section.
+* **Path to request**: the request URL sent to the auth-request backend.
+
+The following parameters are only available in the `auth-intercept` script:
+
+* **Method**: the HTTP method that should be used. Use an asterisk `*` to ask
+`auth-intercept` to copy the same method used by the client. `auth-request`
+uses the `HEAD` method.
+* **Headers to copy on Request**: a comma-separated list of a simplified glob
+pattern that should match the HTTP header names to copy from the client to the
+auth-intercept backend. Use a dash `-` to not copy any header.
+* **Headers to copy on Success**: a comma-separated list of a simplified glob
+pattern that should match the HTTP header names to copy from the auth-intercept
+backend to the protected backend server, if the auth-intercept backend respond
+with 2xx response code and the request succeed. All headers received from the
+auth-intercept will override headers with the same name provided by the client.
+Use `*` to copy all headers, or use a dash `-` to not copy any header. HAProxy
+variables are always created, see the [Available Variables](#available-variables)
+section.
+* **Headers to copy on Failure**: a comma-separated list of a simplified glob
+pattern that should match the HTTP header names to copy from the auth-intercept
+backend to the client, if the request failed. `auth-intercept` will use the
+same HTTP method and body sent by the auth-intercept backend to respond to the
+client, closing the transaction. The protected backend server will not be used.
+Use `*` to copy all headers. Use a dash `-` to not close the transaction and
+leave to the HAProxy configuration the task to deny the request based on the
+`txn.auth_response_successful` variable. HAProxy variables are always created,
+see the [Available Variables](#available-variables) section.
+
+Simplified glob pattern: use an asterisk `*` to match any sequence of
+characters and `?` to match a single char. `*` will match any header name.
+`x-*` will match all header names started with `x-`. `x-????` will match
+`x-user` but will not match neither `x-token` nor `x-id`.
+
+HAProxy 2.1 or older: the On Failure param (the last one) will close the
+transaction and respond to the client if the value is not a dash `-`, however
+this feature is only supported on HAProxy 2.2 or newer. The only supported
+option on 2.1 and older is a dash `-`.
 
 ### Available Variables
 
