@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: MIT
+
+varnishtest "Verify that headers are correctly filtered using a simplified glob pattern."
+feature ignore_unknown_macro
+
+server s1 {
+    rxreq
+    txresp -status 201
+} -start
+
+server s_auth_backend {
+    rxreq
+    expect req.http.x-user == "logan"
+    expect req.http.x-passwd == "top$secret"
+    expect req.http.y-token == "<undef>"
+    expect req.http.y-uid == "dead-...-beef"
+    expect req.http.z-myapp == "<undef>"
+    expect req.http.z-app == "another-data"
+    txresp
+} -start
+
+haproxy h1 -conf {
+    global
+        lua-load ${testdir}/../auth-request.lua
+
+    listen fe1
+        mode http
+        bind "fd@${fe1}"
+        http-request lua.auth-intercept auth_backend / * x-*,y-???,*-app - -
+        http-request deny if ! { var(txn.auth_response_successful) -m bool }
+        server s1 ${s1_addr}:${s1_port}
+
+    backend auth_backend
+        mode http
+        server auth_backend ${s_auth_backend_addr}:${s_auth_backend_port}
+} -start
+
+client c1 -connect ${h1_fe1_sock} {
+    txreq \
+        -hdr "x-user: logan" \
+        -hdr "x-passwd: top$secret" \
+        -hdr "y-token: bearer value" \
+        -hdr "y-uid: dead-...-beef" \
+        -hdr "z-myapp: some-data" \
+        -hdr "z-app: another-data"
+    rxresp
+    expect resp.status == 201
+} -run

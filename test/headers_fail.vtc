@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: MIT
+
+varnishtest "Verify that filtered auth backend response headers are passed to the client."
+feature ignore_unknown_macro
+feature cmd "dpkg --compare-versions ${haproxy_version} ge 2.2"
+
+server s_auth_backend {
+    rxreq
+    txresp \
+        -status 401 \
+        -hdr "x-user: admin" \
+        -hdr "x-passwd: 123" \
+        -hdr "x-reason: invalid pwd" \
+        -hdr "token: asd" \
+        -hdr "other: value" \
+        -body "{\"msg\":\"invalid pwd\"}"
+} -start
+
+haproxy h1 -conf {
+    global
+        lua-load ${testdir}/../auth-request.lua
+
+    listen fe1
+        mode http
+        bind "fd@${fe1}"
+        http-request lua.auth-intercept auth_backend / * * - x-user,x-reason
+
+    backend auth_backend
+        mode http
+        server auth_backend ${s_auth_backend_addr}:${s_auth_backend_port}
+} -start
+
+client c1 -connect ${h1_fe1_sock} {
+    txreq
+    rxresp
+    expect resp.status == 401
+    expect resp.http.x-user == "admin"
+    expect resp.http.x-passwd == "<undef>"
+    expect resp.http.x-reason == "invalid pwd"
+    expect resp.http.token == "<undef>"
+    expect resp.http.other == "<undef>"
+    expect resp.body == "{\"msg\":\"invalid pwd\"}"
+} -run

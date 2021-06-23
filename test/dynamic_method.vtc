@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: MIT
+
+varnishtest "Verify that auth-request backend receives the client method."
+feature ignore_unknown_macro
+
+server s1 {
+    rxreq
+    txresp
+} -repeat 3 -start
+
+server s_auth_backend {
+    rxreq
+    expect req.method == "POST"
+    txresp
+
+    accept
+    rxreq
+    expect req.method == "GET"
+    txresp
+
+    accept
+    rxreq
+    expect req.method == "HEAD"
+    txresp
+} -start
+
+haproxy h1 -conf {
+    global
+        lua-load ${testdir}/../auth-request.lua
+
+    listen fe1
+        mode http
+        bind "fd@${fe1}"
+        http-request lua.auth-intercept auth_backend / * * - -
+        http-request deny if ! { var(txn.auth_response_successful) -m bool }
+        server s1 ${s1_addr}:${s1_port}
+
+    backend auth_backend
+        mode http
+        server auth_backend ${s_auth_backend_addr}:${s_auth_backend_port}
+} -start
+
+client c1 -connect ${h1_fe1_sock} {
+    txreq -method "POST"
+    rxresp
+    txreq -method "GET"
+    rxresp
+    txreq -method "HEAD"
+    rxresp
+} -run
