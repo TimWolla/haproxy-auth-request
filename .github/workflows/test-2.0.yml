@@ -1,8 +1,0 @@
-name: "Work around GitHub bug"
-on:
-  workflow_dispatch:
-jobs:
-  Hello:
-    runs-on: ubuntu-latest
-    steps:
-      - run: true
