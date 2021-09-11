@@ -63,5 +63,7 @@ jobs:
         sudo install -m755 -d /usr/local/share/lua/5.3/
         sudo install -m644 haproxy-lua-http/http.lua /usr/local/share/lua/5.3/haproxy-lua-http.lua
         sed -i 's/lua-prepend-path/#lua-prepend-path/g' test/*.vtc
+    - name: Install problem matcher for VTest.
+      run: echo "::add-matcher::.github/vtest.json"
     - name: Run tests using HAProxy ${{ steps.install-haproxy.outputs.version }}.
       run: vtest -Dhaproxy_version=${{ steps.install-haproxy.outputs.version }} -k -t 10 test/*.vtc
