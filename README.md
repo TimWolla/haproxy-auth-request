@@ -17,7 +17,7 @@ loosely based on the [ngx_http_auth_request_module] module for nginx.
 ## Usage
 
 1. Load this Lua script in the `global` section of your `haproxy.cfg`:
-    ```
+    ```haproxy
     global
         # *snip*
         lua-prepend-path /usr/share/haproxy/?/http.lua # If haproxy-lua-http is saved as /usr/share/haproxy/haproxy-lua-http/http.lua
@@ -25,14 +25,14 @@ loosely based on the [ngx_http_auth_request_module] module for nginx.
     ```
 
 2. Define a backend that is used for the subrequests:
-    ```
+    ```haproxy
     backend auth_request
         mode http
         server auth_request 127.0.0.1:8080 check
     ```
 
 3. Execute the subrequest in your frontend (as early as possible):
-    ```
+    ```haproxy
     frontend http
         mode http
         bind :::80 v4v6
@@ -49,7 +49,7 @@ loosely based on the [ngx_http_auth_request_module] module for nginx.
     ```
 
 4. Act on the results:
-    ```
+    ```haproxy
     frontend http
         # *snip*
 
