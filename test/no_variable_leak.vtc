@@ -3,6 +3,7 @@
 varnishtest "Verify that we don't leak variables."
 feature ignore_unknown_macro
 feature cmd "dpkg --compare-versions ${haproxy_version} ge 2.2"
+feature cmd "dpkg --compare-versions ${haproxy_version} lt 2.5-dev6"
 
 server s1 {
     rxreq
