@@ -50,7 +50,7 @@ haproxy h1 -conf {
         bind "fd@${fe1}"
 
         http-request lua.auth-request auth_backend /allow
-        http-request deny unless { var(req.auth_response_header.x_authenticated_user) root }
+        http-request deny unless { var(req.auth_response_header.x_authenticated_user) -m str root }
 
         http-request set-header x-echo "%[var(req.auth_response_header.content_type)]|%[var(req.auth_response_header.x_authenticated_user)]|%[var(req.auth_response_header.x_authenticated_email)]"
         http-request set-var(txn.echo) req.fhdr(x-echo)
