@@ -67,4 +67,18 @@ jobs:
     - name: Install problem matcher for VTest.
       run: echo "::add-matcher::.github/vtest.json"
     - name: Run tests using HAProxy ${{ steps.install-haproxy.outputs.version }}.
-      run: vtest -Dhaproxy_version=${{ steps.install-haproxy.outputs.version }} -k -t 10 test/*.vtc
+      run: |
+        vtest -Dhaproxy_version=${{ steps.install-haproxy.outputs.version }} -k -t 10 test/*.vtc 2>&1 \
+          |tee >(
+            awk '
+              $5=="passed"{icon=":heavy_check_mark:"}
+              $5=="skipped"{icon=":grey_question:"}
+              $5=="FAILED"{icon=":x:"}
+              $1 == "#" && $3=="TEST"{
+                print "- " icon " " $4
+              }
+              {line=$0}
+              END{print "# " $0}
+            ' \
+            |tac >> $GITHUB_STEP_SUMMARY
+          )
