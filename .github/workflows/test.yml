@@ -45,6 +45,7 @@ jobs:
         - "2.4"
         - "2.5"
         - "2.6"
+        - "2.7"
       fail-fast: false
     steps:
     - name: Install HAProxy ${{ matrix.haproxy-versions }}.
