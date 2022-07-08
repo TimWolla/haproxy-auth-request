@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: MIT
+
+varnishtest "Verify that multi-valued filtered auth backend response headers are passed to the client."
+feature ignore_unknown_macro
+feature cmd "dpkg --compare-versions ${haproxy_version} ge 2.2"
+
+server s_auth_backend {
+    rxreq
+    txresp \
+        -status 401 \
+        -hdr "x-user: admin" \
+        -hdr "x-passwd: 123" \
+        -hdr "x-reason: invalid pwd" \
+        -hdr "x-reason: account expired" \
+        -hdr "set-cookie: csrf=1234;" \
+        -hdr "set-cookie: session=;" \
+        -body "{\"msg\":\"invalid pwd\"}"
+} -start
+
+haproxy h1 -conf {
+    global
+        lua-prepend-path ${testdir}/../?/http.lua
+        lua-load ${testdir}/../auth-request.lua
+
+    listen fe1
+        mode http
+        bind "fd@${fe1}"
+        http-request lua.auth-intercept auth_backend / * * - x-user,x-reason,set-cookie
+
+    backend auth_backend
+        mode http
+        server auth_backend ${s_auth_backend_addr}:${s_auth_backend_port}
+} -start
+
+client c1 -connect ${h1_fe1_sock} {
+    txreq
+    rxresp
+    expect resp.status == 401
+    expect resp.http.x-user == "admin"
+    expect resp.http.x-passwd == "<undef>"
+
+    # vtest only sees the first value of a header
+    # but at least we can ensure they're not folded with commas
+
+    expect resp.http.x-reason == "invalid pwd"
+    #expect resp.http.x-reason == "account expired" # 2nd value, can't check
+
+    expect resp.http.set-cookie == "csrf=1234;"
+    #expect resp.http.set-cookie == "session=;" # 2nd value, can't check
+
+    expect resp.body == "{\"msg\":\"invalid pwd\"}"
+} -run
