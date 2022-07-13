@@ -25,6 +25,20 @@ haproxy h1 -conf {
     listen fe1
         mode http
         bind "fd@${fe1}"
+
+        # VTest only sees the first header with a given name, thus
+        # we split the expected headers into separate headers that
+        # can be checked independently.
+        http-response set-header set-cookie1 %[res.fhdr(set-cookie,1)]
+        http-response set-header set-cookie2 %[res.fhdr(set-cookie,2)]
+        http-response set-header x-reason1 %[res.fhdr(x-reason,1)]
+        http-response set-header x-reason2 %[res.fhdr(x-reason,2)]
+
+        server be ${h1_fe2_addr}:${h1_fe2_port}
+
+    listen fe2
+        mode http
+        bind "fd@${fe2}"
         http-request lua.auth-intercept auth_backend / * * - x-user,x-reason,set-cookie
 
     backend auth_backend
@@ -39,14 +53,13 @@ client c1 -connect ${h1_fe1_sock} {
     expect resp.http.x-user == "admin"
     expect resp.http.x-passwd == "<undef>"
 
-    # vtest only sees the first value of a header
-    # but at least we can ensure they're not folded with commas
+    expect resp.http.x-reason !~ ","
+    expect resp.http.x-reason1 == "invalid pwd"
+    expect resp.http.x-reason2 == "account expired"
 
-    expect resp.http.x-reason == "invalid pwd"
-    #expect resp.http.x-reason == "account expired" # 2nd value, can't check
-
-    expect resp.http.set-cookie == "csrf=1234;"
-    #expect resp.http.set-cookie == "session=;" # 2nd value, can't check
+    expect resp.http.set-cookie !~ ","
+    expect resp.http.set-cookie1 == "csrf=1234;"
+    expect resp.http.set-cookie2 == "session=;"
 
     expect resp.body == "{\"msg\":\"invalid pwd\"}"
 } -run
