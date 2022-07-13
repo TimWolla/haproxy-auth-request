@@ -97,7 +97,7 @@ function send_response(txn, response, hdr_fail)
 	local reply = txn:reply()
 	if response then
 		reply:set_status(response.status_code)
-		for header, value in response:get_headers(true) do
+		for header, value in response:get_headers(false) do
 			if header_match(header, hdr_fail) then
 				reply:add_header(header, value)
 			end
