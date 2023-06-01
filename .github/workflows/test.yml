@@ -70,6 +70,7 @@ jobs:
       run: echo "::add-matcher::.github/vtest.json"
     - name: Run tests using HAProxy ${{ steps.install-haproxy.outputs.version }}.
       run: |
+        set -euo pipefail
         vtest -Dhaproxy_version=${{ steps.install-haproxy.outputs.version }} -k -t 10 test/*.vtc 2>&1 \
           |tee >(
             awk '
