@@ -21,7 +21,7 @@ loosely based on the [ngx_http_auth_request_module] module for nginx.
     global
         # *snip*
         lua-prepend-path /usr/share/haproxy/?/http.lua # If haproxy-lua-http is saved as /usr/share/haproxy/haproxy-lua-http/http.lua
-        lua-load /usr/share/haproxy/auth-request.lua
+        lua-load-per-thread /usr/share/haproxy/auth-request.lua # You may want just lua-load in earlier versions of haproxy.
     ```
 
 2. Define a backend that is used for the subrequests:
