@@ -77,10 +77,29 @@ function sanitize_header_for_variable(header)
 	return header:gsub("[^a-zA-Z0-9]", "_")
 end
 
+-- Headers that must never be copied between connections, per RFC 9110
+-- section 7.6.1. "connection" and "upgrade" are not merely unclean here:
+-- copying "connection: upgrade" plus "upgrade: websocket" from the client
+-- makes HAProxy's strict H1 parser reject the synthesized auth probe with
+-- <BADREQ>, because the probe is a plain HEAD that the frontend cannot
+-- service as an upgrade request. Suppressing "connection" also lets
+-- haproxy-lua-http add its intended "connection: close".
+local HOP_BY_HOP_HEADERS = {
+	["connection"] = true,
+	["proxy-connection"] = true,
+	["keep-alive"] = true,
+	["upgrade"] = true,
+	["te"] = true,
+	["trailer"] = true,
+	["transfer-encoding"] = true,
+	["content-length"] = true,
+	["host"] = true,
+}
+
 -- header_match checks whether the provided header matches the pattern.
 -- pattern is a comma-separated list of Lua Patterns.
 function header_match(header, pattern)
-	if header == "content-length" or header == "host" or pattern == "-" then
+	if HOP_BY_HOP_HEADERS[header] or pattern == "-" then
 		return false
 	end
 	for p in pattern:gmatch("[^,]*") do
