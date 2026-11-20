@@ -145,6 +145,11 @@ function auth_request(txn, be, path, method, hdr_req, hdr_succeed, hdr_fail)
 		return
 	end
 
+	-- Enclose IPv6 addresses in square brackets
+	if not addr:find("%.") and not addr:match("^%[.*%]:%d+$") then
+		addr = string.format("[%s]:%s", addr:match("^(.*):(%d+)$"))
+	end
+
 	-- Transform table of request headers from haproxy's to
 	-- socket.http's format.
 	local headers = {}
