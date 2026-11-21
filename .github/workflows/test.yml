@@ -63,15 +63,12 @@ jobs:
         install_vtest: yes
         use_lua: yes
     - name: Install apt dependencies.
-      run: sudo apt-get install -y lua-json
+      run: sudo apt-get install -y lua-json lua5.4
     - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Run header_match unit tests.
-      run: |
-        set -euo pipefail
-        lua_bin="$(command -v lua || command -v lua5.4 || command -v lua5.3 || command -v lua5.1)"
-        "$lua_bin" test/header_match.lua
+      run: lua5.4 test/header_match.lua
     - name: Install haproxy-lua-http globally.
       run: |
         sudo install -m755 -d /usr/local/share/lua/5.3/
