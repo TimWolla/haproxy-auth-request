@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: MIT
+
+varnishtest "Verify that hop-by-hop headers are not copied into the failure response."
+feature ignore_unknown_macro
+feature cmd "dpkg --compare-versions ${haproxy_version} ge 2.2"
+
+server s_auth_backend {
+    rxreq
+    txresp \
+        -status 401 \
+        -hdr "x-reason: invalid pwd" \
+        -hdr "upgrade: websocket" \
+        -hdr "keep-alive: timeout=5, max=1000" \
+        -hdr "trailer: expires" \
+        -hdr "te: trailers"
+} -start
+
+haproxy h1 -conf {
+    global
+        lua-prepend-path ${testdir}/../?/http.lua
+        lua-load ${testdir}/../auth-request.lua
+
+    listen fe1
+        mode http
+        bind "fd@${fe1}"
+        http-request lua.auth-intercept auth_backend / * * - *
+
+    backend auth_backend
+        mode http
+        server auth_backend ${s_auth_backend_addr}:${s_auth_backend_port}
+} -start
+
+client c1 -connect ${h1_fe1_sock} {
+    txreq
+    rxresp
+    expect resp.status == 401
+    # hdr_fail is `*`, so this header only reaches the client via header_match().
+    expect resp.http.x-reason == "invalid pwd"
+    # The remaining entries of the blocklist are suppressed even though the
+    # auth backend sent them and the pattern asked for everything.
+    expect resp.http.upgrade == "<undef>"
+    expect resp.http.keep-alive == "<undef>"
+    expect resp.http.trailer == "<undef>"
+    expect resp.http.te == "<undef>"
+} -run
