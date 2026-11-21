@@ -9,10 +9,10 @@ server s_auth_backend {
     txresp \
         -status 401 \
         -hdr "x-reason: invalid pwd" \
-        -hdr "upgrade: websocket" \
         -hdr "keep-alive: timeout=5, max=1000" \
+        -hdr "te: trailers" \
         -hdr "trailer: expires" \
-        -hdr "te: trailers"
+        -hdr "upgrade: websocket"
 } -start
 
 haproxy h1 -conf {
@@ -34,12 +34,9 @@ client c1 -connect ${h1_fe1_sock} {
     txreq
     rxresp
     expect resp.status == 401
-    # hdr_fail is `*`, so this header only reaches the client via header_match().
     expect resp.http.x-reason == "invalid pwd"
-    # The remaining entries of the blocklist are suppressed even though the
-    # auth backend sent them and the pattern asked for everything.
-    expect resp.http.upgrade == "<undef>"
     expect resp.http.keep-alive == "<undef>"
-    expect resp.http.trailer == "<undef>"
     expect resp.http.te == "<undef>"
+    expect resp.http.trailer == "<undef>"
+    expect resp.http.upgrade == "<undef>"
 } -run

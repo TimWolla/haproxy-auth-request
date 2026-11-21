@@ -5,17 +5,13 @@ feature ignore_unknown_macro
 
 server s1 {
     rxreq
-    # hdr_succeed is `*`, so every header below that reaches this server does so
-    # through header_match(). Ordinary ones must survive the blocklist.
     expect req.http.x-user == "admin"
     expect req.http.token == "asd"
-    # Hop-by-hop headers from the auth backend must not be injected into the
-    # request forwarded to the protected backend.
     expect req.http.connection == "<undef>"
-    expect req.http.upgrade == "<undef>"
     expect req.http.keep-alive == "<undef>"
-    expect req.http.trailer == "<undef>"
     expect req.http.te == "<undef>"
+    expect req.http.trailer == "<undef>"
+    expect req.http.upgrade == "<undef>"
     txresp -status 201
 } -start
 
@@ -25,10 +21,10 @@ server s_auth_backend {
         -status 200 \
         -hdr "x-user: admin" \
         -hdr "token: asd" \
-        -hdr "upgrade: websocket" \
         -hdr "keep-alive: timeout=5, max=1000" \
+        -hdr "te: trailers" \
         -hdr "trailer: expires" \
-        -hdr "te: trailers"
+        -hdr "upgrade: websocket"
 } -start
 
 haproxy h1 -conf {

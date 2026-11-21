@@ -10,28 +10,21 @@ server s1 {
 
 server s_auth_backend {
     rxreq
-    # Ordinary headers must still be copied, so that the blocklist is not
-    # swallowing more than RFC 9110 section 7.6.1 requires.
     expect req.http.x-user == "admin"
     expect req.http.x-passwd == "123"
-    # HAProxy forwards these to the Lua layer, so each one is a real regression
-    # guard: they reach this server when the blocklist is absent.
-    expect req.http.proxy-connection == "<undef>"
     expect req.http.keep-alive == "<undef>"
+    expect req.http.proxy-connection == "<undef>"
     expect req.http.te == "<undef>"
     expect req.http.trailer == "<undef>"
-    # Whatever an older HAProxy hands to Lua, the probe must end up with
-    # haproxy-lua-http's own "connection: close", which it appends only when no
-    # connection header was copied. On HAProxy 3.4 that header never reaches the
-    # Lua layer at all, so this assertion documents the probe rather than
-    # guarding the blocklist; the blocklist entries above do the guarding.
-    expect req.http.connection == "close"
-    # A copied content-length would announce a body that the probe never
-    # sends, which makes the auth server wait for bytes that never arrive.
-    # Both this and Host were already suppressed before the blocklist existed,
-    # so they are guards against a regression rather than new behaviour;
-    # test/header_match.lua pins down every entry of the blocklist itself.
+
+    # The body is not forwarded, thus the `content-length` must
+    # be absent
     expect req.http.content-length == "<undef>"
+
+    # haproxy-lua-http appends its own `connection: close` that
+    # must not be dropped or modified.
+    expect req.http.connection == "close"
+
     txresp
 } -start
 
@@ -55,13 +48,13 @@ haproxy h1 -conf {
 client c1 -connect ${h1_fe1_sock} {
     txreq \
         -method "POST" \
-        -hdr "connection: keep-alive" \
-        -hdr "proxy-connection: keep-alive" \
-        -hdr "keep-alive: timeout=5, max=1000" \
-        -hdr "te: trailers" \
-        -hdr "trailer: expires" \
         -hdr "x-user: admin" \
         -hdr "x-passwd: 123" \
+        -hdr "connection: keep-alive" \
+        -hdr "keep-alive: timeout=5, max=1000" \
+        -hdr "proxy-connection: keep-alive" \
+        -hdr "te: trailers" \
+        -hdr "trailer: expires" \
         -body "ping"
     rxresp
     expect resp.status == 201
