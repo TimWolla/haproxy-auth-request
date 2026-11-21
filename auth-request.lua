@@ -86,14 +86,14 @@ end
 -- haproxy-lua-http add its intended "connection: close".
 local HOP_BY_HOP_HEADERS = {
 	["connection"] = true,
-	["proxy-connection"] = true,
+	["content-length"] = true,
+	["host"] = true,
 	["keep-alive"] = true,
-	["upgrade"] = true,
+	["proxy-connection"] = true,
 	["te"] = true,
 	["trailer"] = true,
 	["transfer-encoding"] = true,
-	["content-length"] = true,
-	["host"] = true,
+	["upgrade"] = true,
 }
 
 -- header_match checks whether the provided header matches the pattern.
